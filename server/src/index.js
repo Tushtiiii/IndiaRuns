@@ -12,6 +12,7 @@ const jobRoutes = require('./routes/jobRoutes');
 const candidateRoutes = require('./routes/candidateRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const rankerRoutes = require('./routes/rankerRoutes');
 
 const app = express();
 
@@ -68,6 +69,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ranker', aiLimiter, rankerRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {

@@ -5,6 +5,7 @@ import { logout } from '../../store/slices/authSlice';
 const recruiterLinks = [
   { to: '/recruiter', label: '🏠 Dashboard' },
   { to: '/recruiter/jobs/new', label: '➕ Post Job' },
+  { to: '/recruiter/resume-ranker', label: '🤖 AI Resume Ranker' },
   { to: '/recruiter/interview-questions', label: '🎯 Interview Qs' },
   { to: '/recruiter/analytics', label: '📈 Analytics' },
 ];
@@ -55,7 +56,9 @@ export default function AppLayout({ children }) {
         {/* Nav Links */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
           {links.map(({ to, label }) => {
-            const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to) && !(to === '/recruiter' && location.pathname.includes('/jobs/'));
+            const isActive = to === '/recruiter'
+              ? location.pathname === '/recruiter'
+              : location.pathname.startsWith(to);
             return (
               <Link key={to} to={to} style={{
                 padding: '10px 14px', borderRadius: 'var(--radius-md)',

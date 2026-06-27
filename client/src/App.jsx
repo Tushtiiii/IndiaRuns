@@ -11,6 +11,7 @@ import CandidateComparison from './pages/recruiter/CandidateComparison';
 import AnalyticsDashboard from './pages/recruiter/Analytics';
 import InterviewQuestions from './pages/recruiter/InterviewQuestions';
 import CandidateDashboard from './pages/candidate/CandidateDashboard';
+import ResumeRanker from './pages/recruiter/ResumeRanker';
 import AppLayout from './components/layout/AppLayout';
 
 // ─── Stub pages for routes not yet fully built ─────────────────
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/recruiter/analytics" element={<ProtectedRoute allowedRoles={['recruiter', 'admin']}><AnalyticsDashboard /></ProtectedRoute>} />
         <Route path="/recruiter/interview-questions" element={<ProtectedRoute allowedRoles={['recruiter', 'admin']}><InterviewQuestions /></ProtectedRoute>} />
         <Route path="/recruiter/chat" element={<ProtectedRoute allowedRoles={['recruiter', 'admin']}><Stub title="AI Chat Assistant" /></ProtectedRoute>} />
+        <Route path="/recruiter/resume-ranker" element={<ProtectedRoute allowedRoles={['recruiter', 'admin']}><ResumeRanker /></ProtectedRoute>} />
 
         {/* Candidate */}
         <Route path="/candidate" element={<ProtectedRoute allowedRoles={['candidate']}><CandidateDashboard /></ProtectedRoute>} />
