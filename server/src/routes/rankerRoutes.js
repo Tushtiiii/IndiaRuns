@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalProtect } = require('../middleware/auth');
 const { analyzeResumes, parseJD, exportRankedResults } = require('../controllers/rankerController');
 
 // ─── Multer: accept both JD file and candidate list file ─────────────────────
@@ -39,16 +39,14 @@ const multiUpload = upload.fields([
 const singleJD = upload.fields([{ name: 'jdFile', maxCount: 1 }]);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-router.use(protect);
-router.use(authorize('recruiter', 'admin'));
 
-// POST /api/ranker/analyze  → rank candidates, return JSON response
-router.post('/analyze', multiUpload, analyzeResumes);
+// POST /api/ranker/analyze  → public (no login required), attach user if present
+router.post('/analyze', optionalProtect, multiUpload, analyzeResumes);
 
-// POST /api/ranker/export   → rank candidates, return downloadable JSON file
-router.post('/export', multiUpload, exportRankedResults);
+// POST /api/ranker/export   → public (no login required)
+router.post('/export', optionalProtect, multiUpload, exportRankedResults);
 
-// POST /api/ranker/parse-jd → parse JD only (preview what was extracted)
-router.post('/parse-jd', singleJD, parseJD);
+// POST /api/ranker/parse-jd → protected (recruiter/admin only)
+router.post('/parse-jd', protect, authorize('recruiter', 'admin'), singleJD, parseJD);
 
 module.exports = router;

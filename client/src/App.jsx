@@ -49,11 +49,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
+        {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/resume-ranker" element={<ResumeRanker />} />
 
         {/* Recruiter */}
         <Route path="/recruiter" element={<ProtectedRoute allowedRoles={['recruiter', 'admin']}><RecruiterDashboard /></ProtectedRoute>} />

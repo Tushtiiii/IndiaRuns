@@ -1,4 +1,5 @@
 import { useNavigate, Link } from 'react-router-dom';
+import RankerPreviewWidget from '../components/RankerPreviewWidget';
 
 const features = [
   { icon: '🧠', title: 'AI-Powered Matching', desc: 'Semantic understanding of job requirements and candidate profiles beyond keyword matching.' },
@@ -21,6 +22,8 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', fontFamily: 'var(--font-body)' }}>
+      {/* Floating AI Ranker preview widget */}
+      <RankerPreviewWidget />
       {/* ─── Navbar ─── */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
@@ -110,6 +113,16 @@ export default function LandingPage() {
           }}>
             Start Hiring Smarter →
           </button>
+          <button onClick={() => navigate('/resume-ranker')} style={{
+            padding: '14px 36px', borderRadius: 'var(--radius-full)',
+            background: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(124,58,237,0.15))',
+            color: 'var(--text-primary)',
+            border: '1px solid rgba(124,58,237,0.4)', fontSize: 16, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'var(--font-body)',
+            transition: 'all 0.2s ease',
+          }}>
+            🤖 Try AI Ranker Free
+          </button>
           <button onClick={() => navigate('/register?role=candidate')} style={{
             padding: '14px 36px', borderRadius: 'var(--radius-full)',
             background: 'transparent', color: 'var(--text-primary)',
@@ -154,6 +167,55 @@ export default function LandingPage() {
               <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.7 }}>{f.desc}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ─── Live Demo CTA ─── */}
+      <section style={{ padding: '60px 48px', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: 32,
+          padding: '48px 56px',
+          background: 'linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(6,182,212,0.08) 100%)',
+          border: '1px solid rgba(124,58,237,0.25)',
+          borderRadius: 'var(--radius-xl)',
+          backdropFilter: 'blur(20px)',
+        }}>
+          <div style={{ maxWidth: 520 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '4px 14px', borderRadius: 'var(--radius-full)',
+              background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)',
+              fontSize: 12, color: '#06b6d4', marginBottom: 16, fontWeight: 600,
+            }}>
+              ⚡ No Account Required
+            </div>
+            <h2 style={{ fontSize: '1.9rem', fontFamily: 'var(--font-heading)', marginBottom: 12 }}>
+              Try the AI Ranker <span style={{
+                background: 'var(--gradient-primary)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>Right Now</span>
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: '1rem' }}>
+              Upload a job description + paste your candidates list. Get AI-powered rankings in seconds — completely free, no sign-up needed.
+              <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}> Login only to save results.</span>
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/resume-ranker')}
+            style={{
+              padding: '16px 44px', borderRadius: 'var(--radius-full)',
+              background: 'var(--gradient-primary)', color: 'white',
+              border: 'none', fontSize: 17, fontWeight: 700, cursor: 'pointer',
+              boxShadow: 'var(--shadow-glow)', fontFamily: 'var(--font-body)',
+              whiteSpace: 'nowrap', transition: 'transform 0.2s ease',
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.04)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            🤖 Open AI Resume Ranker
+          </button>
         </div>
       </section>
 

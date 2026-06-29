@@ -4,30 +4,49 @@
  * Switch providers by changing AI_PROVIDER in .env:
  *   AI_PROVIDER=gemini  → uses Google Gemini API
  *   AI_PROVIDER=openai  → uses OpenAI API
+ *   AI_PROVIDER=groq    → uses Groq API (llama-3.3-70b-versatile)
  *
  * No code changes required when switching.
  */
 
-const provider = (process.env.AI_PROVIDER || 'gemini').toLowerCase();
+const provider = (process.env.AI_PROVIDER ).toLowerCase();
 
 // ─── Provider Initialization ─────────────────────────────────────────────────
-let geminiClient, openaiClient, geminiModel, geminiEmbeddingModel;
+let geminiClient, openaiClient, groqClient, geminiModel, geminiEmbeddingModel;
 
 if (provider === 'gemini') {
   const { GoogleGenerativeAI } = require('@google/generative-ai');
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  geminiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   geminiEmbeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' });
 } else if (provider === 'openai') {
   const OpenAI = require('openai');
   openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+} else if (provider === 'groq') {
+  // Groq is OpenAI-compatible — no extra package needed
+  const OpenAI = require('openai');
+  groqClient = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1',
+  });
 }
+
+// Active Groq model (set GROQ_MODEL in .env to override)
+const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
 
 // ─── Core: Generate Text ─────────────────────────────────────────────────────
 const generateText = async (prompt) => {
   if (provider === 'gemini') {
     const result = await geminiModel.generateContent(prompt);
     return result.response.text();
+  } else if (provider === 'groq') {
+    const completion = await groqClient.chat.completions.create({
+      model: groqModel,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+    });
+    return completion.choices[0].message.content;
   } else {
     const completion = await openaiClient.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -42,10 +61,24 @@ const generateText = async (prompt) => {
 const generateEmbedding = async (text) => {
   // Truncate to avoid token limits
   const truncated = text.slice(0, 8000);
-
+  
   if (provider === 'gemini') {
     const result = await geminiEmbeddingModel.embedContent(truncated);
     return result.embedding.values; // 768-dimensional vector
+  } else if (provider === 'groq') {
+    // Groq does not support embeddings — fall back to OpenAI if key is set,
+    // otherwise return a zero vector so ranking degrades gracefully.
+    if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.startsWith('your_')) {
+      const OpenAI = require('openai');
+      const fallback = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const response = await fallback.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: truncated,
+      });
+      return response.data[0].embedding;
+    }
+    console.warn('[aiService] Groq does not support embeddings. Returning zero vector.');
+    return new Array(1536).fill(0);
   } else {
     const response = await openaiClient.embeddings.create({
       model: 'text-embedding-3-small',

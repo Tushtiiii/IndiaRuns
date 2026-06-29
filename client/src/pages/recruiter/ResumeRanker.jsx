@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate, Link } from 'react-router-dom';
 import AppLayout from '../../components/layout/AppLayout';
 import './ResumeRanker.css';
 
@@ -282,9 +283,133 @@ function UploadZone({ label, accept, file, onChange, hint }) {
   );
 }
 
+// ─── Guest Navbar (shown when not inside AppLayout) ────────────────────────────
+function GuestNav() {
+  return (
+    <nav style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '14px 40px',
+      background: 'rgba(10, 11, 20, 0.9)',
+      backdropFilter: 'blur(20px)',
+      borderBottom: '1px solid var(--border-color)',
+    }}>
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 9,
+          background: 'var(--gradient-primary)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+        }}>🎯</div>
+        <span style={{ fontFamily: 'var(--font-heading)', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>TalentAI</span>
+      </Link>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Link to="/login" style={{
+          padding: '8px 20px', borderRadius: 'var(--radius-full)',
+          border: '1px solid var(--border-color)', color: 'var(--text-primary)',
+          textDecoration: 'none', fontSize: 13, fontWeight: 500,
+        }}>Log In</Link>
+        <Link to="/register" style={{
+          padding: '8px 20px', borderRadius: 'var(--radius-full)',
+          background: 'var(--gradient-primary)', color: 'white',
+          textDecoration: 'none', fontSize: 13, fontWeight: 600,
+        }}>Sign Up Free</Link>
+      </div>
+    </nav>
+  );
+}
+
+// ─── Login Save Banner ─────────────────────────────────────────────────────────
+function LoginSaveBanner({ onDismiss }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '12px 24px',
+      background: 'linear-gradient(90deg, rgba(124,58,237,0.18) 0%, rgba(6,182,212,0.12) 100%)',
+      border: '1px solid rgba(124,58,237,0.3)',
+      borderRadius: 'var(--radius-md)',
+      marginBottom: 24,
+      gap: 16, flexWrap: 'wrap',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 20 }}>💾</span>
+        <div>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 14 }}>
+            You're using TalentAI as a guest.
+          </span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 13, marginLeft: 6 }}>
+            Results won't be saved. Log in to save, export, and manage your analyses.
+          </span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <Link to="/login" style={{
+          padding: '7px 18px', borderRadius: 'var(--radius-full)',
+          border: '1px solid rgba(124,58,237,0.5)', color: 'var(--accent-primary)',
+          textDecoration: 'none', fontSize: 13, fontWeight: 600,
+        }}>Log In</Link>
+        <Link to="/register" style={{
+          padding: '7px 18px', borderRadius: 'var(--radius-full)',
+          background: 'var(--gradient-primary)', color: 'white',
+          textDecoration: 'none', fontSize: 13, fontWeight: 700,
+        }}>Create Free Account</Link>
+        <button onClick={onDismiss} style={{
+          background: 'none', border: 'none', color: 'var(--text-muted)',
+          cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px',
+        }}>✕</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Post-Analysis Guest Alert ─────────────────────────────────────────────────
+function GuestResultAlert({ onDismiss }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 14,
+      padding: '16px 22px',
+      background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(6,182,212,0.08) 100%)',
+      border: '1px solid rgba(16,185,129,0.35)',
+      borderRadius: 'var(--radius-md)',
+      marginBottom: 20,
+    }}>
+      <span style={{ fontSize: 24, flexShrink: 0, marginTop: 2 }}>🎉</span>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', marginBottom: 4 }}>
+          Analysis complete! Create a free account to save these results.
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          Your ranked candidates won't be stored as a guest. Sign up free to save analyses,
+          compare candidates over time, and access the full recruiter dashboard.
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <Link to="/register" style={{
+            padding: '8px 22px', borderRadius: 'var(--radius-full)',
+            background: 'var(--gradient-primary)', color: 'white',
+            textDecoration: 'none', fontSize: 13, fontWeight: 700,
+          }}>Create Free Account →</Link>
+          <Link to="/login" style={{
+            padding: '8px 20px', borderRadius: 'var(--radius-full)',
+            border: '1px solid var(--border-color)', color: 'var(--text-secondary)',
+            textDecoration: 'none', fontSize: 13, fontWeight: 500,
+          }}>Log In</Link>
+        </div>
+      </div>
+      <button onClick={onDismiss} style={{
+        background: 'none', border: 'none', color: 'var(--text-muted)',
+        cursor: 'pointer', fontSize: 16, flexShrink: 0,
+      }}>✕</button>
+    </div>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function ResumeRanker() {
-  const { token } = useSelector((s) => s.auth);
+  const { token, user } = useSelector((s) => s.auth);
+  const isGuest = !token || !user;
+  const navigate = useNavigate();
+
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showResultAlert, setShowResultAlert] = useState(false);
 
   const [jdFile, setJdFile] = useState(null);
   const [candidatesFile, setCandidatesFile] = useState(null); // .json/.jsonl file
@@ -394,13 +519,14 @@ export default function ResumeRanker() {
 
       const res = await fetch(`${API_BASE}/ranker/analyze`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Analysis failed.');
       setResults(data);
       setProgress({ stage: '✅ Analysis complete!', pct: 100 });
+      if (isGuest) setShowResultAlert(true);
     } catch (err) {
       setError(err.message || 'Analysis failed. Please try again.');
     } finally {
@@ -428,10 +554,18 @@ export default function ResumeRanker() {
         )
     : [];
 
-  return (
-    <AppLayout>
-      <div className="ranker-page">
-        {/* ── Header ── */}
+  const content = (
+    <div className="ranker-page">
+      {/* Guest banner */}
+      {isGuest && !bannerDismissed && (
+        <LoginSaveBanner onDismiss={() => setBannerDismissed(true)} />
+      )}
+      {/* Guest result alert */}
+      {isGuest && showResultAlert && (
+        <GuestResultAlert onDismiss={() => setShowResultAlert(false)} />
+      )}
+
+      {/* ── Header ── */}
         <div className="ranker-header">
           <div>
             <h1 className="ranker-title">
@@ -624,7 +758,7 @@ export default function ResumeRanker() {
           </>
         )}
 
-        {/* ── Detail Modal ── */}
+      {/* ── Detail Modal ── */}
         {selectedItem && (
           <DetailModal
             item={selectedItem}
@@ -633,6 +767,19 @@ export default function ResumeRanker() {
           />
         )}
       </div>
-    </AppLayout>
   );
+
+  // Render with appropriate layout
+  if (isGuest) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', fontFamily: 'var(--font-body)' }}>
+        <GuestNav />
+        <div style={{ paddingTop: 70 }}>
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return <AppLayout>{content}</AppLayout>;
 }
