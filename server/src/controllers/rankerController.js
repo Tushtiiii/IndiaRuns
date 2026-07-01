@@ -140,9 +140,12 @@ const normalizeCandidateProfile = async (candidate) => {
  * Score a single candidate against a parsed JD using heuristic + semantic scoring
  */
 const scoreCandidate = (jdParsed, candidateProfile, jdEmbedding, candidateEmbedding) => {
-  const requiredSkills = (jdParsed.requiredSkills || []).map((s) => s.toLowerCase().trim());
-  const preferredSkills = (jdParsed.preferredSkills || []).map((s) => s.toLowerCase().trim());
-  const candidateSkills = (candidateProfile.skills || []).map((s) => s.toLowerCase().trim());
+  const toStrArr = (arr) =>
+    (arr || []).filter((s) => s != null).map((s) => String(s).toLowerCase().trim());
+
+  const requiredSkills  = toStrArr(jdParsed.requiredSkills);
+  const preferredSkills = toStrArr(jdParsed.preferredSkills);
+  const candidateSkills = toStrArr(candidateProfile.skills);
 
   // ── Skill Match (0-100) ───────────────────────────────────────────
   let skillMatch = 70;
@@ -185,7 +188,7 @@ const scoreCandidate = (jdParsed, candidateProfile, jdEmbedding, candidateEmbedd
   }
 
   // ── Education Match (0-100) ───────────────────────────────────────
-  const eduReqs = (jdParsed.educationRequirements || []).map((e) => e.toLowerCase());
+  const eduReqs = (jdParsed.educationRequirements || []).filter((e) => e != null).map((e) => String(e).toLowerCase());
   const candEdu = candidateProfile.education || [];
   let educationMatch = 50; // neutral default
   if (candEdu.length > 0) {
@@ -215,33 +218,34 @@ const scoreCandidate = (jdParsed, candidateProfile, jdEmbedding, candidateEmbedd
   }
 
   // ── Semantic similarity from embeddings ───────────────────────────
-  const semanticSim = cosineSimilarity(jdEmbedding, candidateEmbedding);
+  const rawSim = cosineSimilarity(jdEmbedding, candidateEmbedding);
+  // If embeddings are unavailable (Groq returns zero vectors), rawSim = 0 for
+  // every candidate equally — zero ranking signal. Detect this and redistribute
+  // that 15% weight to the other factors so scores can still reach 100.
+  const embeddingsActive =
+    jdEmbedding?.some?.((v) => v !== 0) || candidateEmbedding?.some?.((v) => v !== 0);
+  const semanticSim   = Number.isFinite(rawSim) ? rawSim : 0;
   const semanticScore = Math.round(semanticSim * 100);
 
   // ── Weighted Final Score ──────────────────────────────────────────
-  const weights = {
-    skillMatch: 0.32,
-    experienceMatch: 0.22,
-    projectRelevance: 0.15,
-    educationMatch: 0.12,
-    certifications: 0.04,
-    semantic: 0.15,
-  };
+  const weights = embeddingsActive
+    ? { skillMatch: 0.32, experienceMatch: 0.22, projectRelevance: 0.15,
+        educationMatch: 0.12, certifications: 0.04, semantic: 0.15 }
+    : { skillMatch: 0.40, experienceMatch: 0.25, projectRelevance: 0.17,
+        educationMatch: 0.13, certifications: 0.05, semantic: 0 };
 
-  const finalScore = Math.min(
-    100,
-    Math.max(
-      0,
-      Math.round(
-        weights.skillMatch * skillMatch +
-          weights.experienceMatch * experienceMatch +
-          weights.projectRelevance * projectRelevance +
-          weights.educationMatch * educationMatch +
-          weights.certifications * certifications +
-          weights.semantic * semanticScore
-      )
-    )
-  );
+  const rawFinal =
+    weights.skillMatch       * skillMatch +
+    weights.experienceMatch  * experienceMatch +
+    weights.projectRelevance * projectRelevance +
+    weights.educationMatch   * educationMatch +
+    weights.certifications   * certifications +
+    weights.semantic         * semanticScore;
+
+  const finalScore = Math.min(100, Math.max(0, Math.round(
+    Number.isFinite(rawFinal) ? rawFinal : 0
+  )));
+
 
   return {
     skillMatch: Math.round(skillMatch),
@@ -258,15 +262,17 @@ const scoreCandidate = (jdParsed, candidateProfile, jdEmbedding, candidateEmbedd
  * Generate AI insights for a single candidate
  */
 const generateCandidateAnalysis = async (jdParsed, candidate, scores, jdRawText) => {
-  const matchedSkills = (jdParsed.requiredSkills || []).filter((sk) =>
-    (candidate.skills || []).some(
+  const toStr = (v) => (v != null ? String(v) : '');
+  const jdRequired = (jdParsed.requiredSkills || []).filter((s) => s != null).map(toStr);
+  const candSkillsStr = (candidate.skills || []).filter((s) => s != null).map(toStr);
+
+  const matchedSkills = jdRequired.filter((sk) =>
+    candSkillsStr.some(
       (cs) => cs.toLowerCase().includes(sk.toLowerCase()) || sk.toLowerCase().includes(cs.toLowerCase())
     )
   );
 
-  const missingSkills = (jdParsed.requiredSkills || []).filter(
-    (sk) => !matchedSkills.includes(sk)
-  );
+  const missingSkills = jdRequired.filter((sk) => !matchedSkills.includes(sk));
 
   const prompt = `
 You are a senior technical recruiter evaluating a candidate.

@@ -112,7 +112,7 @@ const candidateSchema = new mongoose.Schema(
   }
 );
 
-candidateSchema.index({ userId: 1 });
+// Note: userId index is already created by unique:true on the field definition above
 candidateSchema.index({ skills: 1 });
 candidateSchema.index({ totalExperienceYears: 1 });
 

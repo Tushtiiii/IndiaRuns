@@ -1,17 +1,24 @@
 /**
  * AI Service — Provider-Agnostic Abstraction Layer
  *
- * Switch providers by changing AI_PROVIDER in .env:
+ * Switch LLM by changing AI_PROVIDER in .env:
  *   AI_PROVIDER=gemini  → uses Google Gemini API
  *   AI_PROVIDER=openai  → uses OpenAI API
  *   AI_PROVIDER=groq    → uses Groq API (llama-3.3-70b-versatile)
  *
+ * Switch embeddings by changing EMBEDDING_PROVIDER in .env:
+ *   EMBEDDING_PROVIDER=voyage  → Voyage AI  (recommended — high quality)
+ *   EMBEDDING_PROVIDER=openai  → OpenAI text-embedding-3-small
+ *   EMBEDDING_PROVIDER=gemini  → Google text-embedding-004
+ *   EMBEDDING_PROVIDER=auto    → follows AI_PROVIDER (legacy behaviour)
+ *
  * No code changes required when switching.
  */
 
-const provider = (process.env.AI_PROVIDER ).toLowerCase();
+const provider = (process.env.AI_PROVIDER || 'groq').toLowerCase();
+const embeddingProvider = (process.env.EMBEDDING_PROVIDER || 'auto').toLowerCase();
 
-// ─── Provider Initialization ─────────────────────────────────────────────────
+// ─── LLM Provider Initialization ─────────────────────────────────────────────
 let geminiClient, openaiClient, groqClient, geminiModel, geminiEmbeddingModel;
 
 if (provider === 'gemini') {
@@ -29,6 +36,17 @@ if (provider === 'gemini') {
     apiKey: process.env.GROQ_API_KEY,
     baseURL: 'https://api.groq.com/openai/v1',
   });
+}
+
+// ─── Voyage AI Embedding Client ───────────────────────────────────────────────
+// Init whenever: (a) EMBEDDING_PROVIDER=voyage explicitly, or (b) a VOYAGE_API_KEY exists (auto mode)
+let voyageClient = null;
+if (process.env.VOYAGE_API_KEY && !process.env.VOYAGE_API_KEY.startsWith('your_')) {
+  if (embeddingProvider === 'voyage' || embeddingProvider === 'auto') {
+    const { VoyageAIClient } = require('voyageai');
+    voyageClient = new VoyageAIClient({ apiKey: process.env.VOYAGE_API_KEY });
+    console.log('[aiService] Voyage AI embedding client initialised.');
+  }
 }
 
 // Active Groq model (set GROQ_MODEL in .env to override)
@@ -59,33 +77,50 @@ const generateText = async (prompt) => {
 
 // ─── Core: Generate Embedding Vector ─────────────────────────────────────────
 const generateEmbedding = async (text) => {
-  // Truncate to avoid token limits
-  const truncated = text.slice(0, 8000);
-  
-  if (provider === 'gemini') {
-    const result = await geminiEmbeddingModel.embedContent(truncated);
-    return result.embedding.values; // 768-dimensional vector
-  } else if (provider === 'groq') {
-    // Groq does not support embeddings — fall back to OpenAI if key is set,
-    // otherwise return a zero vector so ranking degrades gracefully.
-    if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.startsWith('your_')) {
-      const OpenAI = require('openai');
-      const fallback = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const response = await fallback.embeddings.create({
-        model: 'text-embedding-3-small',
-        input: truncated,
+  // Truncate to avoid token limits (Voyage supports up to ~16k tokens)
+  const truncated = text.slice(0, 10000);
+
+  // ── 1. Voyage AI (highest quality, provider-agnostic) ─────────────────
+  if (voyageClient) {
+    try {
+      const response = await voyageClient.embed({
+        input: [truncated],
+        model: 'voyage-3-lite',   // fast + cost-effective; swap to 'voyage-3' for max quality
       });
-      return response.data[0].embedding;
+      return response.data[0].embedding; // 512-dimensional (voyage-3-lite) or 1024 (voyage-3)
+    } catch (err) {
+      console.error('[aiService] Voyage embedding failed, falling back:', err.message);
+      // Fall through to provider-based fallbacks below
     }
-    console.warn('[aiService] Groq does not support embeddings. Returning zero vector.');
-    return new Array(1536).fill(0);
-  } else {
+  }
+
+  // ── 2. Provider-native embeddings ────────────────────────────────────
+  if (embeddingProvider === 'gemini' || (embeddingProvider === 'auto' && provider === 'gemini')) {
+    const result = await geminiEmbeddingModel.embedContent(truncated);
+    return result.embedding.values; // 768-dimensional
+  }
+
+  if (embeddingProvider === 'openai' || (embeddingProvider === 'auto' && provider === 'openai')) {
     const response = await openaiClient.embeddings.create({
       model: 'text-embedding-3-small',
       input: truncated,
     });
-    return response.data[0].embedding; // 1536-dimensional vector
+    return response.data[0].embedding; // 1536-dimensional
   }
+
+  // ── 3. Groq fallback: try OpenAI key, else warn ───────────────────────
+  if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.startsWith('your_')) {
+    const OpenAI = require('openai');
+    const fallback = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const response = await fallback.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: truncated,
+    });
+    return response.data[0].embedding;
+  }
+
+  console.warn('[aiService] No embedding provider available. Returning zero vector — semantic scoring disabled.');
+  return new Array(1536).fill(0);
 };
 
 // ─── Parse Job Description ────────────────────────────────────────────────────
@@ -330,6 +365,8 @@ const cosineSimilarity = (vecA, vecB) => {
     normA += vecA[i] ** 2;
     normB += vecB[i] ** 2;
   }
+  // Guard: zero vectors → cosine is undefined; return 0 instead of NaN
+  if (normA === 0 || normB === 0) return 0;
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 };
 
